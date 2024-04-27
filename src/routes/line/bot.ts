@@ -45,10 +45,8 @@ async function handleEvent(event) {
       latitude: locationInfo.latitude,
       longitude: locationInfo.longitude,
     });
-  }
-  for (const japanAddress of japanAddresses) {
     const gooogleMapUrl = new URL('https://www.google.com/maps/search/');
-    const queryParams = new URLSearchParams({ api: '1', query: japanAddress });
+    const queryParams = new URLSearchParams({ api: '1', query: locationInfo.title });
     gooogleMapUrl.search = queryParams.toString();
     responseMessages.push({
       type: 'text',
