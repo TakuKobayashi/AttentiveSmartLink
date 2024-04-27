@@ -58,7 +58,7 @@ const serverlessConfiguration: AWS = {
     },
     dotenv: {
       path: './.env',
-      include: Object.keys(configedEnv.parsed),
+      include: Object.keys(configedEnv.parsed || {}),
     },
   },
 };
