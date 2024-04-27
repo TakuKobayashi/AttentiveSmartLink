@@ -24,9 +24,11 @@ jobs:
       env:
         LINE_BOT_CHANNEL_ACCESSTOKEN: ${{ secrets.LINE_BOT_CHANNEL_ACCESSTOKEN }}
         LINE_BOT_CHANNEL_SECRET: ${{ secrets.LINE_BOT_CHANNEL_SECRET }}
+        YAHOO_API_CLIENT_ID: ${{ secrets.YAHOO_API_CLIENT_ID }}
       run: |
         echo "LINE_BOT_CHANNEL_ACCESSTOKEN=${LINE_BOT_CHANNEL_ACCESSTOKEN}" >> ./.env
         echo "LINE_BOT_CHANNEL_SECRET=${LINE_BOT_CHANNEL_SECRET}" >> ./.env
+        echo "YAHOO_API_CLIENT_ID=${YAHOO_API_CLIENT_ID}" >> ./.env
     - name: yarn install
       working-directory: ./
       run: yarn install

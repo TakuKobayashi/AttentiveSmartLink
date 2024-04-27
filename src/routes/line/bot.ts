@@ -1,5 +1,7 @@
 import express, { NextFunction, Request, Response } from 'express';
-import { messagingApi, middleware, TextMessage } from '@line/bot-sdk';
+import axios from 'axios';
+import { japanAddressRegExp } from '@/utils/regexp-components';
+import { LocationMessage, messagingApi, middleware, TextMessage } from '@line/bot-sdk';
 const { MessagingApiClient } = messagingApi;
 
 const lineBotRouter = express.Router();
@@ -10,6 +12,8 @@ const config = {
 };
 
 const client = new MessagingApiClient(config);
+
+const japanAddressRegexp = japanAddressRegExp('g');
 
 lineBotRouter.get('/', (req: Request, res: Response, next: NextFunction) => {
   res.send('hello line');
@@ -34,11 +38,38 @@ async function handleEvent(event) {
     return Promise.resolve(null);
   } else if (event.type === 'message') {
     if (event.message.type === 'text') {
-      const echo: TextMessage = { type: 'text', text: event.message.text };
-      return client.replyMessage({
-        replyToken: event.replyToken,
-        messages: [echo],
-      });
+      const japanAddresses = event.message.text.match(japanAddressRegexp) || [];
+      const responses = await Promise.all(
+        japanAddresses.map((japanAddress: string) =>
+          axios.get('https://map.yahooapis.jp/geocode/V1/geoCoder', {
+            params: { appid: process.env.YAHOO_API_CLIENT_ID, query: japanAddress, output: 'json' },
+          }),
+        ),
+      );
+      const responseLocationMessages: LocationMessage[] = [];
+      for (const response of responses) {
+        const gecodeData = response.data;
+        const feature = (gecodeData.Feature || [])[0];
+        if (feature) {
+          const [lat, lon] = feature.Geometry.Coordinates.split(',');
+          responseLocationMessages.push({
+            type: 'location',
+            title: feature.Name,
+            address: feature.Property.Address,
+            latitude: lat,
+            longitude: lon,
+          });
+        }
+      }
+
+      if (responseLocationMessages.length > 0) {
+        return client.replyMessage({
+          replyToken: event.replyToken,
+          messages: responseLocationMessages,
+        });
+      } else {
+        return Promise.resolve(null);
+      }
     } else if (event.message.type === 'location') {
       return Promise.resolve(null);
     } else if (event.message.type === 'sticker') {
