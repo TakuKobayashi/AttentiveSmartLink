@@ -1,0 +1,41 @@
+on:
+    push:
+      branches:
+        - master
+
+name: Serverless Deploy
+jobs:
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x]
+    steps:
+    - uses: actions/checkout@v4
+    - name: setup ubuntu
+      run: sudo apt-get --quiet update --yes
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+    - name: Register .env
+      working-directory: ./serverless
+      env:
+        LINE_BOT_CHANNEL_ACCESSTOKEN: ${{ secrets.LINE_BOT_CHANNEL_ACCESSTOKEN }}
+        LINE_BOT_CHANNEL_SECRET: ${{ secrets.LINE_BOT_CHANNEL_SECRET }}
+      run: |
+        echo "LINE_BOT_CHANNEL_ACCESSTOKEN=${LINE_BOT_CHANNEL_ACCESSTOKEN}" >> ./.env
+        echo "LINE_BOT_CHANNEL_SECRET=${LINE_BOT_CHANNEL_SECRET}" >> ./.env
+    - name: yarn install
+      working-directory: ./serverless
+      run: yarn install
+    - name: serverless package and deploy
+      working-directory: ./serverless
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      run: |
+        yarn run serverless package --stage production --package ./build
+        yarn run serverless config credentials --provider aws --key ${AWS_ACCESS_KEY_ID} --secret ${AWS_SECRET_ACCESS_KEY}
+        yarn run serverless deploy --stage production --package ./build
