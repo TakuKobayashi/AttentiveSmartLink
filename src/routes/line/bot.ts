@@ -51,7 +51,7 @@ async function handleEvent(event) {
         const gecodeData = response.data;
         const feature = (gecodeData.Feature || [])[0];
         if (feature) {
-          const [lat, lon] = feature.Geometry.Coordinates.split(',');
+          const [lon, lat] = feature.Geometry.Coordinates.split(',');
           responseLocationMessages.push({
             type: 'location',
             title: feature.Name,
