@@ -1,7 +1,8 @@
 import express, { NextFunction, Request, Response } from 'express';
-import axios from 'axios';
 import { japanAddressRegExp } from '@/utils/regexp-components';
-import { LocationMessage, messagingApi, middleware, TextMessage } from '@line/bot-sdk';
+import { convertLocationObjectFromAddress } from '@/utils/geocoding';
+import { Message, messagingApi, middleware } from '@line/bot-sdk';
+import { compact } from 'lodash';
 const { MessagingApiClient } = messagingApi;
 
 const lineBotRouter = express.Router();
@@ -30,55 +31,38 @@ lineBotRouter.post('/message', middleware(config), async (req: Request, res: Res
 });
 
 async function handleEvent(event) {
-  if (event.type === 'follow') {
-    const profile = await client.getProfile(event.source.userId);
-    console.log(profile);
+  if (event.type !== 'message' || event.message.type !== 'text') {
     return Promise.resolve(null);
-  } else if (event.type === 'unfollow') {
-    return Promise.resolve(null);
-  } else if (event.type === 'message') {
-    if (event.message.type === 'text') {
-      const japanAddresses = event.message.text.match(japanAddressRegexp) || [];
-      const responses = await Promise.all(
-        japanAddresses.map((japanAddress: string) =>
-          axios.get('https://map.yahooapis.jp/geocode/V1/geoCoder', {
-            params: { appid: process.env.YAHOO_API_CLIENT_ID, query: japanAddress, output: 'json' },
-          }),
-        ),
-      );
-      const responseLocationMessages: LocationMessage[] = [];
-      for (const response of responses) {
-        const gecodeData = response.data;
-        const feature = (gecodeData.Feature || [])[0];
-        if (feature) {
-          const [lon, lat] = feature.Geometry.Coordinates.split(',');
-          responseLocationMessages.push({
-            type: 'location',
-            title: feature.Name,
-            address: feature.Property.Address,
-            latitude: lat,
-            longitude: lon,
-          });
-        }
-      }
+  }
+  const japanAddresses: string[] = event.message.text.match(japanAddressRegexp) || [];
+  const locationInfos = await Promise.all(japanAddresses.map((japanAddress) => convertLocationObjectFromAddress(japanAddress)));
+  const responseMessages: Message[] = [];
+  for (const locationInfo of compact(locationInfos)) {
+    responseMessages.push({
+      type: 'location',
+      title: locationInfo.title,
+      address: locationInfo.address,
+      latitude: locationInfo.latitude,
+      longitude: locationInfo.longitude,
+    });
+  }
+  for (const japanAddress of japanAddresses) {
+    const gooogleMapUrl = new URL('https://www.google.com/maps/search/');
+    const queryParams = new URLSearchParams({ api: '1', query: japanAddress });
+    gooogleMapUrl.search = queryParams.toString();
+    responseMessages.push({
+      type: 'text',
+      text: `Google Map\n${gooogleMapUrl.href}`,
+    });
+  }
 
-      if (responseLocationMessages.length > 0) {
-        return client.replyMessage({
-          replyToken: event.replyToken,
-          messages: responseLocationMessages,
-        });
-      } else {
-        return Promise.resolve(null);
-      }
-    } else if (event.message.type === 'location') {
-      return Promise.resolve(null);
-    } else if (event.message.type === 'sticker') {
-      const echo: TextMessage = { type: 'text', text: 'sticker message received' };
-      return client.replyMessage({
-        replyToken: event.replyToken,
-        messages: [echo],
-      });
-    }
+  if (responseMessages.length > 0) {
+    return client.replyMessage({
+      replyToken: event.replyToken,
+      messages: responseMessages,
+    });
+  } else {
+    return Promise.resolve(null);
   }
 }
 
