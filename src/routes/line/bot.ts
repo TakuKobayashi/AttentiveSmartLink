@@ -44,7 +44,8 @@ async function handleEvent(event) {
   } else if (event.type !== 'message' || event.message.type !== 'text') {
     return Promise.resolve(null);
   }
-  const japanAddresses: string[] = matchJapanAddress(event.message.text);
+  const normarizeText = event.message.text.normalize('NFKC');
+  const japanAddresses: string[] = matchJapanAddress(normarizeText);
   const locationInfos = await Promise.all(japanAddresses.map((japanAddress) => convertLocationObjectFromAddress(japanAddress)));
   const responseMessages: Message[] = [];
   for (const locationInfo of compact(locationInfos)) {
@@ -61,6 +62,7 @@ async function handleEvent(event) {
     responseMessages.push({
       type: 'text',
       text: `Google Map\n${gooogleMapUrl.href}`,
+      quoteText: event.message.quoteToken,
     });
   }
 
