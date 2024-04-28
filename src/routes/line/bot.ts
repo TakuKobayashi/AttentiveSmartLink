@@ -1,6 +1,8 @@
 import express, { NextFunction, Request, Response } from 'express';
-import { japanAddressRegExp } from '@/utils/regexp-components';
+
 import { convertLocationObjectFromAddress } from '@/utils/geocoding';
+import { matchJapanAddress } from '@/utils/sanitizer';
+import { groupJoinedMessage } from '@/utils/message-texts';
 import { Message, messagingApi, middleware } from '@line/bot-sdk';
 import { compact } from 'lodash';
 const { MessagingApiClient } = messagingApi;
@@ -13,8 +15,6 @@ const config = {
 };
 
 const client = new MessagingApiClient(config);
-
-const japanAddressRegexp = japanAddressRegExp('g');
 
 lineBotRouter.get('/', (req: Request, res: Response, next: NextFunction) => {
   res.send('hello line');
@@ -31,10 +31,20 @@ lineBotRouter.post('/message', middleware(config), async (req: Request, res: Res
 });
 
 async function handleEvent(event) {
-  if (event.type !== 'message' || event.message.type !== 'text') {
+  if (event.type === 'join') {
+    return client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        {
+          type: 'text',
+          text: groupJoinedMessage,
+        },
+      ],
+    });
+  } else if (event.type !== 'message' || event.message.type !== 'text') {
     return Promise.resolve(null);
   }
-  const japanAddresses: string[] = event.message.text.match(japanAddressRegexp) || [];
+  const japanAddresses: string[] = matchJapanAddress(event.message.text.match);
   const locationInfos = await Promise.all(japanAddresses.map((japanAddress) => convertLocationObjectFromAddress(japanAddress)));
   const responseMessages: Message[] = [];
   for (const locationInfo of compact(locationInfos)) {
