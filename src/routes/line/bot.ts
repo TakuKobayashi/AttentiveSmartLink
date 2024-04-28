@@ -44,7 +44,7 @@ async function handleEvent(event) {
   } else if (event.type !== 'message' || event.message.type !== 'text') {
     return Promise.resolve(null);
   }
-  const japanAddresses: string[] = matchJapanAddress(event.message.text.match);
+  const japanAddresses: string[] = matchJapanAddress(event.message.text);
   const locationInfos = await Promise.all(japanAddresses.map((japanAddress) => convertLocationObjectFromAddress(japanAddress)));
   const responseMessages: Message[] = [];
   for (const locationInfo of compact(locationInfos)) {
