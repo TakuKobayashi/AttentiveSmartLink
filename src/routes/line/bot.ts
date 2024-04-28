@@ -1,7 +1,7 @@
 import express, { NextFunction, Request, Response } from 'express';
 
 import { convertLocationObjectFromAddress } from '@/utils/geocoding';
-import { matchJapanAddress } from '@/utils/sanitizer';
+import { matchJapanAddress } from '@/utils/string-matcher';
 import { groupJoinedMessage } from '@/utils/message-texts';
 import { Message, messagingApi, middleware } from '@line/bot-sdk';
 import { compact } from 'lodash';
