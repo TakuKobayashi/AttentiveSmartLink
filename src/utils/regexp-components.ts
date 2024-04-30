@@ -58,3 +58,11 @@ export function japanAddressRegExp(flags: string = ''): RegExp {
     flags,
   );
 }
+
+export const yearRegExpPart = `(\/|-|年)`;
+export const monthRegExpPart = `(\/|-|月)`;
+export const dayRegExpPart = `日`;
+
+export function urlRegExp(flags: string = ''): RegExp {
+  return new RegExp("(https?|ftp)(://[-_.!~*'()a-zA-Z0-9;/?:@&=+$,%#]+)", flags);
+}

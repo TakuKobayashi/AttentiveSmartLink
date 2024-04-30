@@ -1,7 +1,8 @@
 import express, { NextFunction, Request, Response } from 'express';
+import axios from 'axios';
 
 import { convertLocationObjectFromAddress } from '@/utils/geocoding';
-import { matchJapanAddress } from '@/utils/string-matcher';
+import { matchJapanAddress, matchHttpUrl } from '@/utils/string-matcher';
 import { groupJoinedMessage } from '@/utils/message-texts';
 import { Message, messagingApi, middleware } from '@line/bot-sdk';
 import { compact } from 'lodash';
@@ -30,6 +31,12 @@ lineBotRouter.post('/message', middleware(config), async (req: Request, res: Res
   res.json(result);
 });
 
+async function searchAndLoadlocationInfos(text: string) {
+  const japanAddresses: string[] = matchJapanAddress(text);
+  const locationInfos = await Promise.all(japanAddresses.map((japanAddress) => convertLocationObjectFromAddress(japanAddress)));
+  return locationInfos;
+}
+
 async function handleEvent(event) {
   if (event.type === 'join') {
     return client.replyMessage({
@@ -45,10 +52,19 @@ async function handleEvent(event) {
     return Promise.resolve(null);
   }
   const normarizeText = event.message.text.normalize('NFKC');
-  const japanAddresses: string[] = matchJapanAddress(normarizeText);
-  const locationInfos = await Promise.all(japanAddresses.map((japanAddress) => convertLocationObjectFromAddress(japanAddress)));
+  const urlStrings = matchHttpUrl(normarizeText);
+  const urlLocationInfos = await Promise.all(
+    urlStrings
+      .map(async (urlString) => {
+        const urlRes = await axios.get(urlString);
+        const loadHtmlPage = urlRes.data.toString().normalize('NFKC');
+        return searchAndLoadlocationInfos(loadHtmlPage);
+      })
+      .flat(),
+  );
+  const locationInfos = await searchAndLoadlocationInfos(normarizeText);
   const responseMessages: Message[] = [];
-  for (const locationInfo of compact(locationInfos)) {
+  for (const locationInfo of compact(locationInfos.concat(urlLocationInfos.flat()))) {
     responseMessages.push({
       type: 'location',
       title: locationInfo.title,
