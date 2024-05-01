@@ -1,5 +1,4 @@
 import express, { NextFunction, Request, Response } from 'express';
-import axios from 'axios';
 import { load } from 'cheerio';
 
 import { convertLocationObjectFromAddress, LocationInfo } from '@/utils/geocoding';
