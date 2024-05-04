@@ -59,11 +59,27 @@ async function handleEvent(event) {
     const gooogleMapUrl = new URL('https://www.google.com/maps/search/');
     const queryParams = new URLSearchParams({ api: '1', query: locationInfo.title });
     gooogleMapUrl.search = queryParams.toString();
-    responseMessages.push({
-      type: 'text',
-      text: `Google Map\n${gooogleMapUrl.href}`,
-      quoteText: event.message.quoteToken,
-    });
+    const googleMapOgs = await ogs({ url: gooogleMapUrl.href });
+    const ogImage = googleMapOgs.result.ogImage[0] || {};
+    if (ogImage.url) {
+      responseMessages.push({
+        type: 'template',
+        altText: locationInfo.title,
+        template: {
+          type: 'buttons',
+          thumbnailImageUrl: ogImage.url,
+          title: 'Google Mapで表示します',
+          text: locationInfo.title,
+          actions: [
+            {
+              type: 'uri',
+              label: 'Google Mapで見る',
+              uri: gooogleMapUrl.href,
+            },
+          ],
+        },
+      });
+    }
   }
 
   if (responseMessages.length > 0) {
