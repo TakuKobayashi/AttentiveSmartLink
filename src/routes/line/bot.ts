@@ -1,14 +1,11 @@
 import express, { NextFunction, Request, Response } from 'express';
-import { load } from 'cheerio';
 
-import { convertLocationObjectFromAddress, LocationInfo } from '@/utils/geocoding';
-import { matchJapanAddress, matchHttpUrl } from '@/utils/utils';
+import { searchUrlAndLoadLocationInfos, searchAndConvertLocationInfosFromText } from '@/utils/utils';
 import { groupJoinedMessage } from '@/utils/message-texts';
 import { Message, messagingApi, middleware } from '@line/bot-sdk';
-import { compact, uniq } from 'lodash';
+import { compact } from 'lodash';
 const { MessagingApiClient } = messagingApi;
 
-const ogs = require('open-graph-scraper');
 const lineBotRouter = express.Router();
 
 const config = {
@@ -31,28 +28,6 @@ lineBotRouter.post('/message', middleware(config), async (req: Request, res: Res
   });
   res.json(result);
 });
-
-async function searchAndConvertLocationInfosFromText(text: string): Promise<LocationInfo[]> {
-  const japanAddresses: string[] = uniq(matchJapanAddress(text).map((addressString) => addressString.trim().split(' ')[0]));
-  const locationInfos = await Promise.all(japanAddresses.map((japanAddress) => convertLocationObjectFromAddress(japanAddress)));
-  return locationInfos;
-}
-
-async function searchUrlAndLoadLocationInfos(text: string): Promise<LocationInfo[]> {
-  const urlStrings = uniq(matchHttpUrl(text));
-  const urlOgpResults = await Promise.all(urlStrings.map((urlString) => ogs({ url: urlString })));
-  const locationInfosPromises = [];
-  for (const urlOgpResult of urlOgpResults) {
-    // 投稿されたURLがGoogle Mapsだったならばスルー
-    if (urlOgpResult.error || urlOgpResult.response.url.includes('https://www.google.com/maps')) {
-      continue;
-    }
-    const $ = load(urlOgpResult.html.normalize('NFKC'));
-    locationInfosPromises.push(searchAndConvertLocationInfosFromText($('body').text()));
-  }
-  const locationInfos = await Promise.all(locationInfosPromises);
-  return locationInfos.flat();
-}
 
 async function handleEvent(event) {
   if (event.type === 'join') {
