@@ -5,6 +5,7 @@ import { groupJoinedMessage } from '@/utils/message-texts';
 import { Message, messagingApi, middleware } from '@line/bot-sdk';
 import { compact } from 'lodash';
 const { MessagingApiClient } = messagingApi;
+const ogs = require('open-graph-scraper');
 
 const lineBotRouter = express.Router();
 
