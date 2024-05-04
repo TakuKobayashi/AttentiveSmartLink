@@ -2,7 +2,7 @@ import express, { NextFunction, Request, Response } from 'express';
 import { load } from 'cheerio';
 
 import { convertLocationObjectFromAddress, LocationInfo } from '@/utils/geocoding';
-import { matchJapanAddress, matchHttpUrl } from '@/utils/string-matcher';
+import { matchJapanAddress, matchHttpUrl } from '@/utils/utils';
 import { groupJoinedMessage } from '@/utils/message-texts';
 import { Message, messagingApi, middleware } from '@line/bot-sdk';
 import { compact, uniq } from 'lodash';
