@@ -21,7 +21,6 @@ lineBotRouter.get('/', (req: Request, res: Response, next: NextFunction) => {
 });
 
 lineBotRouter.post('/message', middleware(config), async (req: Request, res: Response, next: NextFunction) => {
-  console.log(JSON.stringify(req.body));
   const result = await Promise.all(req.body.events.map(async (event) => handleEvent(event))).catch((err) => {
     console.error(err);
     res.status(200).end();
